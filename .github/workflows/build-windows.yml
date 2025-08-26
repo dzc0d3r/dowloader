@@ -44,7 +44,7 @@ jobs:
         shell: pwsh
         run: |
           # Adjust the entrypoint path if yours differs (here it's src/enhanced_downloader.py)
-          pyinstaller --onefile --windowed --name my-downloader src/enhanced_downloader.py
+          pyinstaller --onefile --windowed --name downloader4u downloader.py
           # If you have an icon file: add --icon icon.ico
 
       - name: Verify build artifact
