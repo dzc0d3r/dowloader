@@ -50,11 +50,11 @@ jobs:
       - name: Verify build artifact
         shell: pwsh
         run: |
-          if (-not (Test-Path 'dist\my-downloader.exe')) {
-            Write-Error 'Build failed: dist\my-downloader.exe not found'
-            exit 1
-          } else {
-            Write-Host 'Build succeeded: dist\my-downloader.exe'
+            if (-not (Test-Path 'dist\downloader.exe')) {
+              Write-Error 'Build failed: dist\downloader.exe not found'
+              exit 1
+            } else {
+              Write-Host 'Build succeeded: dist\downloader.exe'
           }
 
       - name: Package artifact (zip)
