@@ -1,0 +1,72 @@
+name: Build Windows EXE
+
+# Trigger on push to main or manual dispatch
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build .exe on windows-latest
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'   # pick the Python version you test locally
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path requirements.txt) {
+            pip install -r requirements.txt
+          }
+          pip install pyinstaller
+
+      - name: Show env sanity (Python + Tk)
+        run: |
+          python -V
+          python - <<'PY'
+import tkinter, sys
+print("tk version:", tkinter.TkVersion)
+print("argv example:", sys.argv[:1])
+PY
+
+      - name: Build exe with PyInstaller
+        run: |
+          # Adjust entrypoint path if yours differs
+          pyinstaller --onefile --windowed --name my-downloader src/enhanced_downloader.py
+          # if you have an icon file, add: --icon icon.ico
+
+      - name: Verify build artifact
+        run: |
+          if (-not (Test-Path "dist\\my-downloader.exe")) {
+            Write-Error "Build failed: dist\\my-downloader.exe not found"
+            exit 1
+          } else {
+            Write-Host "Build succeeded: dist\\my-downloader.exe"
+          }
+
+      - name: Package artifact (zip)
+        run: |
+          if (Test-Path "artifact.zip") { Remove-Item -Force artifact.zip }
+          Compress-Archive -Path "dist\\my-downloader.exe" -DestinationPath "artifact.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-exe
+          path: artifact.zip
+wq
