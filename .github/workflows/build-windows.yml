@@ -43,18 +43,18 @@ jobs:
       - name: Build exe with PyInstaller
         shell: pwsh
         run: |
-          # Adjust the entrypoint path if yours differs (here it's src/enhanced_downloader.py)
-          pyinstaller --onefile --windowed --name downloader4u downloader.py
+          # Using downloader.py as the entrypoint and producing downloader.exe
+          pyinstaller --onefile --windowed --name downloader downloader.py
           # If you have an icon file: add --icon icon.ico
 
       - name: Verify build artifact
         shell: pwsh
         run: |
-            if (-not (Test-Path 'dist\downloader.exe')) {
-              Write-Error 'Build failed: dist\downloader.exe not found'
-              exit 1
-            } else {
-              Write-Host 'Build succeeded: dist\downloader.exe'
+          if (-not (Test-Path 'dist\downloader.exe')) {
+            Write-Error 'Build failed: dist\downloader.exe not found'
+            exit 1
+          } else {
+            Write-Host 'Build succeeded: dist\downloader.exe'
           }
 
       - name: Package artifact (zip)
