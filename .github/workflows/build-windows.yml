@@ -47,7 +47,7 @@ PY
       - name: Build exe with PyInstaller
         run: |
           # Adjust entrypoint path if yours differs
-          pyinstaller --onefile --windowed --name my-downloader src/enhanced_downloader.py
+          pyinstaller --onefile --windowed --name my-downloader downloader.py
           # if you have an icon file, add: --icon icon.ico
 
       - name: Verify build artifact
@@ -69,4 +69,4 @@ PY
         with:
           name: windows-exe
           path: artifact.zip
-wq
+
