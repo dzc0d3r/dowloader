@@ -44,7 +44,7 @@ jobs:
         shell: pwsh
         run: |
           # Using downloader.py as the entrypoint and producing downloader.exe
-          python -m PyInstaller --clean --onefile --noconsole --icon=app.ico downloader.py `
+          python -m PyInstaller --clean --noconsole --icon=app.ico downloader.py `
             --additional-hooks-dir=. `
             --hidden-import=ttkbootstrap `
             --hidden-import=PIL._tkinter_finder `
@@ -52,7 +52,7 @@ jobs:
             --hidden-import=PIL._imagingtk `
             --hidden-import=tkinter `
             --hidden-import=_tkinter `
-            --add-data "spinner.gif;."
+            --add-data "spinner.gif:."
           # If you have an icon file: add --icon icon.ico
 
       - name: Verify build artifact
