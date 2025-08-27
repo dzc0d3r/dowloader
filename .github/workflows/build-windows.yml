@@ -43,8 +43,8 @@ jobs:
       - name: Build exe with PyInstaller
         shell: pwsh
         run: |
-          # Using downloader.py as the entrypoint and producing downloader.exe
-          python -m PyInstaller --clean --noconsole --icon=app.ico downloader.py `
+          python -m PyInstaller --clean --noconsole `
+            --icon=app.ico `
             --additional-hooks-dir=. `
             --hidden-import=ttkbootstrap `
             --hidden-import=PIL._tkinter_finder `
@@ -52,24 +52,24 @@ jobs:
             --hidden-import=PIL._imagingtk `
             --hidden-import=tkinter `
             --hidden-import=_tkinter `
-            --add-data "spinner.gif:."
-          # If you have an icon file: add --icon icon.ico
+            --add-data "spinner.gif;." `
+            downloader.py
 
       - name: Verify build artifact
         shell: pwsh
         run: |
-          if (-not (Test-Path 'dist\downloader.exe')) {
-            Write-Error 'Build failed: dist\downloader.exe not found'
+          if (-not (Test-Path 'dist\downloader\downloader.exe')) {
+            Write-Error 'Build failed: dist\downloader\downloader.exe not found'
             exit 1
           } else {
-            Write-Host 'Build succeeded: dist\downloader.exe'
+            Write-Host 'Build succeeded: dist\downloader\downloader.exe'
           }
 
       - name: Package artifact (zip)
         shell: pwsh
         run: |
           if (Test-Path 'artifact.zip') { Remove-Item -Force artifact.zip }
-          Compress-Archive -Path 'dist\downloader.exe' -DestinationPath 'artifact.zip' -Force
+          Compress-Archive -Path 'dist\downloader\downloader.exe' -DestinationPath 'artifact.zip' -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
