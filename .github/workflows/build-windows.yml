@@ -43,25 +43,23 @@ jobs:
       - name: Build exe with PyInstaller
         shell: pwsh
         run: |
-          python -m PyInstaller --clean --noconsole `
-            --add-data "spinner.gif;." `
-            downloader.py
+          python -m nuitka --onefile --enable-plugin=tk-inter downloader.py
 
       - name: Verify build artifact
         shell: pwsh
         run: |
-          if (-not (Test-Path 'dist\downloader\downloader.exe')) {
-            Write-Error 'Build failed: dist\downloader\downloader.exe not found'
+          if (-not (Test-Path 'downloader.dist\downloader.exe')) {
+            Write-Error 'Build failed: downloader.dist\downloader.exe not found'
             exit 1
           } else {
-            Write-Host 'Build succeeded: dist\downloader\downloader.exe'
+            Write-Host 'Build succeeded: downloader.dist\downloader.exe'
           }
 
       - name: Package artifact (zip)
         shell: pwsh
         run: |
           if (Test-Path 'artifact.zip') { Remove-Item -Force artifact.zip }
-          Compress-Archive -Path 'dist\downloader\downloader.exe' -DestinationPath 'artifact.zip' -Force
+          Compress-Archive -Path 'downloader.dist\downloader.exe' -DestinationPath 'artifact.zip' -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
