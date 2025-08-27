@@ -44,14 +44,6 @@ jobs:
         shell: pwsh
         run: |
           python -m PyInstaller --clean --noconsole `
-            --icon=app.ico `
-            --additional-hooks-dir=. `
-            --hidden-import=ttkbootstrap `
-            --hidden-import=PIL._tkinter_finder `
-            --hidden-import=PIL.ImageTk `
-            --hidden-import=PIL._imagingtk `
-            --hidden-import=tkinter `
-            --hidden-import=_tkinter `
             --add-data "spinner.gif;." `
             downloader.py
 
