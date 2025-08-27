@@ -17,27 +17,35 @@ import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import Messagebox
 import yt_dlp
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageSequence
 import requests
 from io import BytesIO
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+def center_window(window, width=900, height=600):
+    """Center the window on the screen."""
+    window.update_idletasks()  # Ensure correct screen size info
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+    window.geometry(f"{width}x{height}+{x}+{y}")
 
 class ModernDownloader:
     def __init__(self, master):
         self.master = master
         master.title("Universal Video Downloader")
-        master.geometry("900x700")
-        
+        #master.geometry("900x600")
+        center_window(master, 1000, 695)
         # Configure grid
         master.columnconfigure(0, weight=1)
         master.rowconfigure(1, weight=1)
         
         # Title
         title_frame = tb.Frame(master)
-        title_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        title_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         title_frame.columnconfigure(0, weight=1)
         
         tb.Label(title_frame, text="Universal Video Downloader", 
@@ -61,28 +69,44 @@ class ModernDownloader:
         
         # Fetch info button
         self.fetch_btn = tb.Button(url_frame, text="Fetch Info", command=self.fetch_video_info, 
-                                  bootstyle="outline-primary")
+                                  bootstyle="primary")
         self.fetch_btn.grid(row=0, column=2, padx=5)
         
         # Video info frame
         self.info_frame = tb.Frame(main_frame)
         self.info_frame.grid(row=1, column=0, sticky="nsew", pady=5)
         self.info_frame.columnconfigure(0, weight=1)
-        self.info_frame.rowconfigure(1, weight=1)
+        self.info_frame.rowconfigure(0, weight=2)
+        self.info_frame.rowconfigure(0, weight=2)
         
         # Thumbnail
-        self.thumbnail_label = tb.Label(self.info_frame, text="Thumbnail will appear here", 
-                                       anchor="center")
-        self.thumbnail_label.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        self.thumbnail_label = tb.Label(self.info_frame, text="Thumbnail will be displayed here", anchor="center")
+        self.thumbnail_label.grid(row=0, column=0, sticky="nsew", pady=10)
         
         # Video info text
-        self.info_text = tb.Text(self.info_frame, height=8, width=60)
-        self.info_text.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+        info_container = tb.Frame(self.info_frame)
+        info_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+        info_container.columnconfigure(0, weight=1)
+        info_container.rowconfigure(0, weight=1)
+        
+        self.info_text = tb.Text(info_container, height=8, width=60)
+        self.info_text.grid(row=0, column=0, sticky="nsew")
         
         # Scrollbar for info text
         scrollbar = tb.Scrollbar(self.info_frame, orient="vertical", command=self.info_text.yview)
         scrollbar.grid(row=1, column=1, sticky="ns")
         self.info_text.configure(yscrollcommand=scrollbar.set)
+        
+        # Loading overlay for just the info frame
+        self.overlay_frame = tb.Frame(self.info_frame)
+        self.overlay_frame.grid(row=0, column=0, rowspan=2, sticky="nsew")
+        self.overlay_frame.columnconfigure(0, weight=1)
+        self.overlay_frame.rowconfigure(0, weight=1)
+        self.overlay_frame.grid_remove()  # Hide initially
+        
+        # Centered spinner label
+        self.central_spinner = tb.Label(self.overlay_frame, text="", anchor="center")
+        self.central_spinner.grid(row=0, column=0, sticky="")
         
         # Download options frame
         options_frame = tb.Frame(main_frame)
@@ -140,22 +164,108 @@ class ModernDownloader:
         self.downloading = False
         self.ydl = None  # yt-dlp instance
         
-        # Supported sites label
-        sites_label = tb.Label(master, text=" Made with ❤️ by Walid Lamraoui  -  Supports: Pinterest, Facebook, Instagram, Twitter, TikTok, and 1000+ other sites", 
-                              font=("Helvetica", 9), bootstyle="light")
-        sites_label.grid(row=3, column=0, sticky="ew", pady=10)
+        # Load spinner GIF
+        self.spinner_frames = []
+        self.spinner_index = 0
+        self.spinner_animation_id = None
+        self.load_spinner_gif()
+        
+        # Centered footer with red hearts
+        footer_frame = tb.Frame(master)
+        footer_frame.grid(row=2, column=0, sticky="ew", pady=10)
+        footer_frame.columnconfigure(0, weight=1)
+        
+        # Create the footer text with two red hearts
+        tb.Label(footer_frame, 
+                text="Supports: Pinterest, Youtube, Facebook, Instagram, Twitter, TikTok, and 1000+ other sites  -   Made with ❤️ by Walid Lamraoui.", 
+                font=("Helvetica", 9), bootstyle="light").grid(row=0, column=0, sticky="ew")
+        
+        # Center the footer content
+        footer_frame.columnconfigure(0, weight=1)
         
         # Bind Enter key to fetch info
         self.master.bind('<Return>', lambda event: self.fetch_video_info())
+    
+    def load_spinner_gif(self):
+        """Load the spinner GIF from the same directory as the script"""
+        try:
+            # Try to load the spinner.gif from the same directory
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            gif_path = os.path.join(script_dir, "spinner.gif")
+            
+            if os.path.exists(gif_path):
+                gif = Image.open(gif_path)
+                for frame in ImageSequence.Iterator(gif):
+                    frame = frame.copy()
+                    # Resize to a reasonable size
+                    frame.thumbnail((50, 50), Image.Resampling.LANCZOS)
+                    self.spinner_frames.append(ImageTk.PhotoImage(frame))
+            else:
+                # Fallback to text spinner if GIF not found
+                logger.warning("spinner.gif not found in script directory. Using text spinner.")
+                self.spinner_frames = None
+        except Exception as e:
+            logger.error(f"Error loading spinner GIF: {e}")
+            self.spinner_frames = None
+    
+    def show_loading_overlay(self):
+        """Show the loading overlay over just the info frame"""
+        self.overlay_frame.grid()
+        self.overlay_frame.lift()  # Bring to front
         
+        if self.spinner_frames:
+            self.central_spinner.configure(image=self.spinner_frames[0])
+        else:
+            self.central_spinner.configure(text="🔄 Loading...")
+        
+        # Start animation
+        self.animate_spinner()
+    
+    def hide_loading_overlay(self):
+        """Hide the loading overlay"""
+        self.overlay_frame.grid_remove()
+        self.stop_animation()
+    
+    def animate_spinner(self):
+        """Animate the spinner GIF"""
+        if self.spinner_frames:
+            self.spinner_index = (self.spinner_index + 1) % len(self.spinner_frames)
+            self.central_spinner.configure(image=self.spinner_frames[self.spinner_index])
+            self.spinner_animation_id = self.master.after(50, self.animate_spinner)
+        else:
+            # Fallback to text animation
+            current_text = self.central_spinner.cget("text")
+            if current_text == "🔄 Loading...":
+                self.central_spinner.configure(text="🔄 Loading..")
+            elif current_text == "🔄 Loading..":
+                self.central_spinner.configure(text="🔄 Loading.")
+            else:
+                self.central_spinner.configure(text="🔄 Loading...")
+            self.spinner_animation_id = self.master.after(300, self.animate_spinner)
+    
+    def stop_animation(self):
+        """Stop the spinner animation"""
+        if self.spinner_animation_id:
+            self.master.after_cancel(self.spinner_animation_id)
+            self.spinner_animation_id = None
+    
     def fetch_video_info(self):
         url = self.url_var.get().strip()
         if not url:
-            Messagebox.show_error("Please enter a URL", "Error")
+            Messagebox.show_error("Please enter a URL", "Error", parent=self.master
+            
+            )
             return
             
         self.fetch_btn.config(state="disabled")
         self.status_var.set("Fetching video info...")
+        
+        # Show loading overlay over just the info frame
+        self.show_loading_overlay()
+        
+        # Clear previous thumbnail and info
+        self.thumbnail_label.config(image="", text="")
+        self.info_text.delete(1.0, tk.END)
         
         # Run in thread to avoid blocking UI
         thread = threading.Thread(target=self._fetch_info_thread, args=(url,), daemon=True)
@@ -167,7 +277,7 @@ class ModernDownloader:
                 'quiet': True,
                 'no_warnings': True,
                 'skip_download': True,
-                'socket_timeout': 30,  # Increased timeout for slow connections
+                'socket_timeout': 9999,  # Increased timeout for slow connections
                 'extract_flat': False,
             }
             
@@ -181,17 +291,23 @@ class ModernDownloader:
         except Exception as e:
             error_msg = f"Error fetching video info: {str(e)}"
             logger.error(error_msg)
-            self.master.after(0, Messagebox.show_error, error_msg, "Error")
+            self.master.after(0, Messagebox.show_error, error_msg, "Error", parent=self.master)
             self.master.after(0, lambda: self.fetch_btn.config(state="normal"))
             self.master.after(0, lambda: self.status_var.set("Ready"))
+            self.master.after(0, self.hide_loading_overlay)
     
     def _update_video_info(self, info):
+        # Hide loading overlay
+        self.hide_loading_overlay()
+        
         # Update thumbnail
         try:
             thumbnail_url = info.get('thumbnail', '')
             if thumbnail_url:
                 # Use a thread to fetch thumbnail to avoid blocking UI
                 threading.Thread(target=self._load_thumbnail, args=(thumbnail_url,), daemon=True).start()
+            else:
+                self.thumbnail_label.config(text="Thumbnail not available")
         except Exception as e:
             self.thumbnail_label.config(text="Thumbnail not available")
             logger.error(f"Error loading thumbnail: {e}")
@@ -222,7 +338,8 @@ class ModernDownloader:
             response = requests.get(thumbnail_url, timeout=10)
             img_data = response.content
             img = Image.open(BytesIO(img_data))
-            img.thumbnail((320, 180), Image.Resampling.LANCZOS)
+            # Make thumbnail larger (increased size)
+            img.thumbnail((480, 270), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.master.after(0, lambda: self.thumbnail_label.config(image=photo, text=""))
             self.master.after(0, lambda: setattr(self.thumbnail_label, "image", photo))  # Keep reference
@@ -232,7 +349,7 @@ class ModernDownloader:
     
     def start_download(self):
         if not self.video_info:
-            Messagebox.show_error("Please fetch video info first", "Error")
+            Messagebox.show_error("Please fetch video info first", "Error", parent=self.master)
             return
             
         self.downloading = True
@@ -267,7 +384,7 @@ class ModernDownloader:
             'quiet': True,
             'no_warnings': False,
             'progress_hooks': [self._progress_hook],
-            'socket_timeout': 30,
+            'socket_timeout': 9999,
             'retries': 9999,  # Increased retries for slow connections
             'buffersize': 1024 * 128,  # Balanced buffer size
             'http_chunk_size': 1024 * 512,  # Balanced chunk size
@@ -294,7 +411,7 @@ class ModernDownloader:
             if not self.stop_event.is_set():
                 error_msg = f"Download error: {str(e)}"
                 logger.error(error_msg)
-                self.master.after(0, Messagebox.show_error, error_msg, "Error")
+                self.master.after(0, Messagebox.show_error, error_msg, "Error", parent=self.master)
                 self.master.after(0, self._reset_ui)
     
     def _progress_hook(self, d):
@@ -336,7 +453,7 @@ class ModernDownloader:
     
     def _download_completed(self):
         self.status_var.set("Download completed!")
-        Messagebox.show_info("Download completed successfully!", "Success")
+        Messagebox.show_info("Download completed successfully!", "Success", parent=self.master)
         self._reset_ui()
     
     def pause_download(self):
@@ -369,7 +486,7 @@ class ModernDownloader:
     
     def _download_cancelled(self):
         self.status_var.set("Download cancelled")
-        Messagebox.show_info("Download was cancelled", "Cancelled")
+        Messagebox.show_info("Download was cancelled", "Cancelled", parent=self.master)
         self._reset_ui()
     
     def _reset_ui(self):

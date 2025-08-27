@@ -2,3 +2,6 @@ parts/
 __pycache__/
 *.mp4
 test.*
+build/
+dist/
+*.spec

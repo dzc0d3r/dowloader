@@ -2,4 +2,4 @@ requests
 ttkbootstrap
 yt-dlp
 Pillow
-
+PyInstaller
